@@ -1,19 +1,36 @@
 const std = @import("std");
-const print = std.debug.print;
-const BoundedArray = std.BoundedArray(u32, 100);
-const HistoryMap = std.StringHashMap(HistoryObj);
+const BoundedArray = std.BoundedArray(u32, 10);
+const HistoryMap = std.StringHashMap([]HistoryObj);
 const History = std.BoundedArray(Pair, 100);
 
+// cheated from
+// https://github.com/ziglang/zig/blob/d2014fe9713794f6cc0830301a1110d5e92d0ff0/lib/std/debug.zig#L84C1-L84C1
+pub fn print(comptime fmt: []const u8, args: anytype) void {
+    const stdout = std.io.getStdOut().writer();
+    nosuspend stdout.print(fmt, args) catch return;
+}
+// var sudokuGrid = [_][9]u32{
+//     [_]u32{ 5, 7, 3, 0, 0, 1, 0, 6, 0 },
+//     [_]u32{ 0, 0, 0, 0, 6, 3, 1, 4, 0 },
+//     [_]u32{ 0, 0, 6, 9, 0, 0, 3, 2, 0 },
+//     [_]u32{ 0, 6, 0, 5, 0, 0, 2, 0, 8 },
+//     [_]u32{ 2, 8, 5, 0, 0, 7, 0, 0, 1 },
+//     [_]u32{ 0, 0, 1, 0, 2, 9, 0, 0, 6 },
+//     [_]u32{ 1, 2, 0, 4, 5, 0, 0, 7, 0 },
+//     [_]u32{ 6, 0, 9, 1, 0, 0, 5, 0, 0 },
+//     [_]u32{ 7, 0, 0, 0, 0, 0, 6, 1, 0 },
+// };
+
 var sudokuGrid = [_][9]u32{
-    [_]u32{ 5, 7, 3, 0, 0, 1, 0, 6, 0 },
-    [_]u32{ 0, 0, 0, 0, 6, 3, 1, 4, 0 },
-    [_]u32{ 0, 0, 6, 9, 0, 0, 3, 2, 0 },
-    [_]u32{ 0, 6, 0, 5, 0, 0, 2, 0, 8 },
-    [_]u32{ 2, 8, 5, 0, 0, 7, 0, 0, 1 },
-    [_]u32{ 0, 0, 1, 0, 2, 9, 0, 0, 6 },
-    [_]u32{ 1, 2, 0, 4, 5, 0, 0, 7, 0 },
-    [_]u32{ 6, 0, 9, 1, 0, 0, 5, 0, 0 },
-    [_]u32{ 7, 0, 0, 0, 0, 0, 6, 1, 0 },
+    [_]u32{ 0, 4, 0, 0, 0, 0, 6, 1, 2 },
+    [_]u32{ 0, 8, 2, 9, 0, 0, 7, 0, 4 },
+    [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    [_]u32{ 0, 7, 0, 0, 0, 4, 0, 0, 0 },
+    [_]u32{ 0, 0, 8, 5, 0, 0, 3, 7, 0 },
+    [_]u32{ 0, 1, 3, 0, 0, 0, 0, 0, 0 },
+    [_]u32{ 0, 0, 0, 8, 0, 0, 0, 0, 0 },
+    [_]u32{ 0, 0, 5, 1, 0, 9, 0, 0, 0 },
+    [_]u32{ 7, 0, 0, 0, 4, 0, 1, 0, 0 },
 };
 
 const HistoryObj = struct {
@@ -22,41 +39,64 @@ const HistoryObj = struct {
     i: usize = 0,
     j: usize = 0,
     values: BoundedArray,
+
+    pub fn init(allocator: std.mem.Allocator, i: usize, j: usize) ![]HistoryObj {
+        var item = HistoryObj{ .i = i, .j = j, .values = try BoundedArray.init(10) };
+        // make all the values in the bounded array 0
+        item.values.set(0, 0);
+        item.values.set(1, 0);
+        item.values.set(2, 0);
+        item.values.set(3, 0);
+        item.values.set(4, 0);
+        item.values.set(5, 0);
+        item.values.set(6, 0);
+        item.values.set(7, 0);
+        item.values.set(8, 0);
+        item.values.set(9, 0);
+
+        var itemArr = [_]HistoryObj{item};
+        const memAddr = try allocator.alloc(HistoryObj, 1);
+        std.mem.copy(HistoryObj, memAddr, &itemArr);
+        return memAddr;
+    }
 };
 
 const Pair = struct { i: usize, j: usize };
 
 pub fn main() !void {
     var HeapAllocator = std.heap.GeneralPurposeAllocator(.{}){};
-    var allocator = HeapAllocator.allocator();
+    var gpa = HeapAllocator.allocator();
+    var ArenaAllocator = std.heap.ArenaAllocator.init(gpa);
+    var allocator = ArenaAllocator.allocator();
 
     var historyMap = HistoryMap.init(allocator);
-    try historyMap.ensureTotalCapacity(100);
+    try historyMap.ensureTotalCapacity(1000); // total capacity ensured is not on the basis of anything
     var list = std.ArrayList(Pair).init(allocator);
 
     defer {
         historyMap.deinit();
         list.deinit();
-        const status = HeapAllocator.deinit();
-        switch (status) {
-            .leak => @panic("failed to deinit allocator"),
-            else => {},
-        }
+        ArenaAllocator.deinit();
     }
 
     var i: usize = 0;
     var j: usize = 0;
+
+    // will be true if we don't want to modify
+    // the values of i & j while backtracking
     var mset: bool = false;
     while (i < sudokuGrid.len) : (i += 1) {
         if (!mset) j = 0;
         while (j < sudokuGrid[0].len) {
             var slot = sudokuGrid[i][j];
-            var usedNums = try BoundedArray.init(10);
-            for (0..10) |u| {
+            var usedNums = try BoundedArray.init(9);
+            for (0..9) |u| {
                 usedNums.set(u, 0);
             }
             var backtrack: bool = true;
 
+            // if slot == 0
+            // or this is a backtrack
             if (slot == 0 or mset) {
                 mset = false;
                 var key = try indexToString(i, j);
@@ -64,59 +104,74 @@ pub fn main() !void {
                 getCol(&usedNums, sudokuGrid, j);
                 getRow(&usedNums, sudokuGrid, i);
                 getSubGrid(&usedNums, sudokuGrid, i, j);
-                // print("{any} \n", .{usedNums.constSlice()});
-                for (usedNums.constSlice(), 0..10) |item, n| {
+
+                for (usedNums.constSlice(), 0..9) |item, n| {
+                    if (item != 0) continue;
                     const num: u32 = @intCast(n + 1);
-                    if (item == 0 and isValidEntry(&usedNums, num) and num != 10) {
-                        var historyObj = HistoryObj{ .i = i, .j = j, .values = try BoundedArray.init(10) };
-                        var existingObj = historyMap.get(key);
-                        backtrack = false;
 
-                        if (existingObj) |xobj| {
-                            for (xobj.values.constSlice()) |v| {
-                                if (num != v) {
-                                    sudokuGrid[i][j] = num;
+                    var existingObj = historyMap.get(key);
 
-                                    for (xobj.values.constSlice()) |co| {
-                                        historyObj.values.set(historyObj.count, co);
-                                        historyObj.count += 1;
-                                    }
+                    // does an object with this key exist already?
+                    if (existingObj) |prevObj| {
+                        var historyObj = &prevObj.ptr[0];
+                        if (isValidEntry(&historyObj.values, num)) {
+                            // if we found a valid entry, don't backtrack
+                            backtrack = false;
 
-                                    historyObj.values.set(historyObj.count, num);
-                                    historyObj.count += 1;
-
-                                    try historyMap.put(key, historyObj);
-                                }
-                            }
-                        } else {
                             sudokuGrid[i][j] = num;
+
+                            // resize to make sure there's enough space to insert
+                            // the new item
+                            try historyObj.values.resize(historyObj.count + 1);
 
                             historyObj.values.set(historyObj.count, num);
                             historyObj.count += 1;
-
                             try historyObj.values.resize(historyObj.count);
 
-                            // insert the pair into the map
-                            const newKey = try indexToString(i, j);
-                            try historyMap.putNoClobber(newKey, historyObj);
-
-                            // insert the pair in hisory
                             try list.append(.{ .i = i, .j = j });
 
                             break;
                         }
+                    } else {
+                        // also don't backtrack if we are inserting a non-existent item
+                        // or an item that previously existed but we removed while backtracking
+                        backtrack = false;
+                        sudokuGrid[i][j] = num;
+
+                        var historyObjAddr = try HistoryObj.init(allocator, i, j);
+                        var historyObj: *HistoryObj = &historyObjAddr.ptr[0];
+
+                        historyObj.values.set(historyObj.count, num);
+                        historyObj.count += 1;
+
+                        historyObj.values.resize(historyObjAddr.ptr[0].count) catch print("failed to resize \n", .{});
+
+                        // insert the pair into the map
+                        const newKey = try indexToString(i, j);
+                        try historyMap.put(newKey, historyObjAddr);
+
+                        // insert the pair in hisory
+                        try list.append(.{ .i = i, .j = j });
+
+                        break;
                     }
                 }
                 if (backtrack) {
+
                     // pop the last item from history
                     // remove entry from hashmap
                     // change the value of i & j
                     sudokuGrid[i][j] = 0;
                     const last = list.pop();
+
+                    var eItem = historyMap.get(key);
+                    if (eItem) |eitem| {
+                        allocator.free(eitem);
+                    }
                     _ = historyMap.remove(key);
-                    // historyCount -= 1;
                     i = last.i;
                     j = last.j;
+
                     mset = true;
                 }
             }
@@ -143,6 +198,7 @@ fn showGrid(grid: [9][9]u32) void {
     }
 }
 
+// checks if num
 fn isValidEntry(array: *BoundedArray, input: u32) bool {
     for (array.constSlice()) |v| {
         if (v == 0) continue;
