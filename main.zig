@@ -9,17 +9,6 @@ pub fn print(comptime fmt: []const u8, args: anytype) void {
     const stdout = std.io.getStdOut().writer();
     nosuspend stdout.print(fmt, args) catch return;
 }
-// var sudokuGrid = [_][9]u32{
-//     [_]u32{ 5, 7, 3, 0, 0, 1, 0, 6, 0 },
-//     [_]u32{ 0, 0, 0, 0, 6, 3, 1, 4, 0 },
-//     [_]u32{ 0, 0, 6, 9, 0, 0, 3, 2, 0 },
-//     [_]u32{ 0, 6, 0, 5, 0, 0, 2, 0, 8 },
-//     [_]u32{ 2, 8, 5, 0, 0, 7, 0, 0, 1 },
-//     [_]u32{ 0, 0, 1, 0, 2, 9, 0, 0, 6 },
-//     [_]u32{ 1, 2, 0, 4, 5, 0, 0, 7, 0 },
-//     [_]u32{ 6, 0, 9, 1, 0, 0, 5, 0, 0 },
-//     [_]u32{ 7, 0, 0, 0, 0, 0, 6, 1, 0 },
-// };
 
 var sudokuGrid = [_][9]u32{
     [_]u32{ 0, 4, 0, 0, 0, 0, 6, 1, 2 },
@@ -144,7 +133,7 @@ pub fn main() !void {
                         historyObj.values.set(historyObj.count, num);
                         historyObj.count += 1;
 
-                        historyObj.values.resize(historyObjAddr.ptr[0].count) catch print("failed to resize \n", .{});
+                        try historyObj.values.resize(historyObjAddr.ptr[0].count);
 
                         // insert the pair into the map
                         const newKey = try indexToString(i, j);
@@ -189,6 +178,7 @@ fn indexToString(i: usize, j: usize) ![]u8 {
     var result = try std.fmt.bufPrint(&state.buffer, "{},{}", .{ i, j });
     return result;
 }
+
 fn showGrid(grid: [9][9]u32) void {
     for (grid) |row| {
         for (row) |slot| {
@@ -198,7 +188,7 @@ fn showGrid(grid: [9][9]u32) void {
     }
 }
 
-// checks if num
+// num is a valid entry if it's not in 'array'
 fn isValidEntry(array: *BoundedArray, input: u32) bool {
     for (array.constSlice()) |v| {
         if (v == 0) continue;
