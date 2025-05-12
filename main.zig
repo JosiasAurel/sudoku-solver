@@ -18,21 +18,42 @@ pub fn print(comptime fmt: []const u8, args: anytype) void {
 //[_]u32{ 7, 0, 0, 0, 4, 0, 1, 0, 0 },
 //};
 
+// 040000612082900704000000000070004000008500370013000000000800000005109000700040100
+
 var sudokuGrid = [_][9]u32{
-    [_]u32{ 0, 0, 6, 0, 0, 0, 0, 0, 0 },
-    [_]u32{ 0, 0, 0, 8, 9, 0, 0, 0, 0 },
-    [_]u32{ 0, 4, 1, 0, 0, 3, 0, 0, 0 },
-    [_]u32{ 0, 8, 0, 0, 0, 5, 1, 0, 7 },
-    [_]u32{ 3, 6, 0, 0, 7, 0, 0, 0, 0 },
-    [_]u32{ 0, 0, 0, 0, 0, 0, 2, 0, 0 },
-    [_]u32{ 0, 0, 0, 3, 0, 1, 0, 2, 0 },
-    [_]u32{ 0, 7, 0, 0, 8, 2, 4, 1, 3 },
-    [_]u32{ 0, 0, 0, 0, 0, 0, 8, 0, 0 },
+    [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 };
+
+// fills the sudoki grid with the string
+// expects each character to fall within [48, 57]
+pub fn buildFromStr(str: [81]u8) void {
+    var row: usize = 0;
+    var column: usize = 0;
+    for (str, 0..str.len) |c, i| {
+        if ((i + 1) % 9 == 0) {
+            row += 1;
+            column = 0;
+            continue;
+        }
+        sudokuGrid[row][column] = c - 48;
+        column += 1;
+    }
+}
 
 pub fn main() void {
     var i: usize = 0;
     var j: usize = 0;
+
+    const sampleStr = "040000612082900704000000000070004000008500370013000000000800000005109000700040100";
+    buildFromStr(@constCast(sampleStr).*);
 
     const solved = solve(&sudokuGrid, &i, &j);
     if (solved) {
