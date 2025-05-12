@@ -6,16 +6,28 @@ pub fn print(comptime fmt: []const u8, args: anytype) void {
     nosuspend stdout.print(fmt, args) catch return;
 }
 
+//var sudokuGrid = [_][9]u32{
+//[_]u32{ 0, 4, 0, 0, 0, 0, 6, 1, 2 },
+//[_]u32{ 0, 8, 2, 9, 0, 0, 7, 0, 4 },
+//[_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+//[_]u32{ 0, 7, 0, 0, 0, 4, 0, 0, 0 },
+//[_]u32{ 0, 0, 8, 5, 0, 0, 3, 7, 0 },
+//[_]u32{ 0, 1, 3, 0, 0, 0, 0, 0, 0 },
+//[_]u32{ 0, 0, 0, 8, 0, 0, 0, 0, 0 },
+//[_]u32{ 0, 0, 5, 1, 0, 9, 0, 0, 0 },
+//[_]u32{ 7, 0, 0, 0, 4, 0, 1, 0, 0 },
+//};
+
 var sudokuGrid = [_][9]u32{
-    [_]u32{ 0, 4, 0, 0, 0, 0, 6, 1, 2 },
-    [_]u32{ 0, 8, 2, 9, 0, 0, 7, 0, 4 },
-    [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    [_]u32{ 0, 7, 0, 0, 0, 4, 0, 0, 0 },
-    [_]u32{ 0, 0, 8, 5, 0, 0, 3, 7, 0 },
-    [_]u32{ 0, 1, 3, 0, 0, 0, 0, 0, 0 },
-    [_]u32{ 0, 0, 0, 8, 0, 0, 0, 0, 0 },
-    [_]u32{ 0, 0, 5, 1, 0, 9, 0, 0, 0 },
-    [_]u32{ 7, 0, 0, 0, 4, 0, 1, 0, 0 },
+    [_]u32{ 0, 0, 6, 0, 0, 0, 0, 0, 0 },
+    [_]u32{ 0, 0, 0, 8, 9, 0, 0, 0, 0 },
+    [_]u32{ 0, 4, 1, 0, 0, 3, 0, 0, 0 },
+    [_]u32{ 0, 8, 0, 0, 0, 5, 1, 0, 7 },
+    [_]u32{ 3, 6, 0, 0, 7, 0, 0, 0, 0 },
+    [_]u32{ 0, 0, 0, 0, 0, 0, 2, 0, 0 },
+    [_]u32{ 0, 0, 0, 3, 0, 1, 0, 2, 0 },
+    [_]u32{ 0, 7, 0, 0, 8, 2, 4, 1, 3 },
+    [_]u32{ 0, 0, 0, 0, 0, 0, 8, 0, 0 },
 };
 
 pub fn main() void {
@@ -36,14 +48,19 @@ fn step(i: *usize, j: *usize) void {
     }
     j.* += 1;
 }
+
 fn solve(grid: *[9][9]u32, i: *usize, j: *usize) bool {
     // freeze the i,j of the parent function
-    var _i = i.*;
-    var _j = j.*;
+    const _i = i.*;
+    const _j = j.*;
+    // look for values that are 0 (representing empty values that need to be filled!)
     while (grid[i.*][j.*] != 0) {
         step(i, j);
     }
 
+    // to be filled with non-zero values in the current
+    // 1. row/column
+    // 2. sudoku sub-grid
     var array: [9]u32 = [9]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     getRow_Col(&array, grid.*, i.*, j.*);
@@ -51,18 +68,22 @@ fn solve(grid: *[9][9]u32, i: *usize, j: *usize) bool {
 
     for (array, 0..array.len) |p, idx| {
         if (p == 0) {
+            // fill the item at 0 with it's numeric value
             grid[i.*][j.*] = @intCast(idx + 1);
+            // if we just filled the last value, then we solved the sudoku
             if (i.* == 8 and j.* == 8) return true;
-            const solved = solve(grid, i, j);
-            if (solved) return true;
+            // try to recursively solve the sudoku
+            const solved = solve(grid, i, j); // forward and try solving the next entry
+            if (solved) return true; // return if we solved it (will propagate back to the original caller)
+            // will continue here and try a different value if the last forward failed
         }
     }
 
     // step behind
-    grid[i.*][j.*] = 0;
+    grid[i.*][j.*] = 0; // set the entry to zero so the caller can try a different value
     i.* = _i;
     j.* = _j;
-    return false;
+    return false; // didn't solve :(
 }
 
 fn showGrid(grid: [9][9]u32) void {
@@ -80,7 +101,7 @@ fn getSubGrid(array: *[9]u32, grid: [9][9]u32, i: usize, j: usize) void {
 
     for ((bi - 3)..bi) |idx| {
         for ((bj - 3)..bj) |jdx| {
-            var num = grid[idx][jdx];
+            const num = grid[idx][jdx];
             if (num != 0) {
                 array[num - 1] = num;
             }
@@ -90,8 +111,8 @@ fn getSubGrid(array: *[9]u32, grid: [9][9]u32, i: usize, j: usize) void {
 
 fn getRow_Col(array: *[9]u32, grid: [9][9]u32, i: usize, j: usize) void {
     for (0..9, 0..9) |_i, _j| {
-        var num1 = grid[i][_j];
-        var num2 = grid[_i][j];
+        const num1 = grid[i][_j];
+        const num2 = grid[_i][j];
 
         if (num1 != 0) {
             array[num1 - 1] = num1;
