@@ -1,0 +1,25 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+
+.card {
+  padding: 2em;
+}
+
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(1fr, 9);
+  grid-gap: 0.5rem;
+}
+
+input {
+  text-align: center;
+  margin: 0 0.5rem;
+  width: 30px;
+  height: 30px;
+}
+
