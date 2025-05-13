@@ -73,13 +73,15 @@ function App() {
 
   return (
     <>
+      <h1> Sudoku Solver (wasm) </h1>
+        <p> (Input your sudoku problem and hit <em>solve</em>!) </p>
       <div className="grid-container">
         {sudokuGrid.map((subgrid, i) => (
           <span key={i}>
             {subgrid.map((entry, j) => (
-                <input key={j} type="number" value={entry} onChange={e => {
+                <input key={j} min={0} max={9} type="number" value={entry} onChange={e => {
                   const gridCopy = [...sudokuGrid];
-                  gridCopy[i][j] = parseInt(e.target.value);
+                  gridCopy[i][j] = parseInt(e.target.value.slice(-1));
                   setSudokuGrid(() => gridCopy);
               }} />
             ))}
@@ -92,6 +94,12 @@ function App() {
         }}>
         Solve
       </button>
+
+      <footer>
+        <p>
+          Checkout my <a href="https://github.com/josiasaurel">GitHub</a> — <a href="https://josiasw.dev/">Josias </a>
+        </p>
+      </footer>
    </>
   )
 }
