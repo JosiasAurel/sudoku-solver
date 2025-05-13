@@ -1,5 +1,4 @@
 main
-main.o
-main.wasm
-main.wasm.o
-out.txt
+*.o
+*.wasm
+*.a
