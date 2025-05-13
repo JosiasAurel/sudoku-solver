@@ -1,5 +1,6 @@
 main
-main.o
-main.wasm
-main.wasm.o
-out.txt
+*.o
+*.wasm
+*.a
+web/node_modules
+web/public/sudoku.wasm

@@ -1,10 +1,5 @@
 const std = @import("std");
-
-// https://github.com/ziglang/zig/blob/d2014fe9713794f6cc0830301a1110d5e92d0ff0/lib/std/debug.zig#L84C1-L84C1
-pub fn print(comptime fmt: []const u8, args: anytype) void {
-    const stdout = std.io.getStdOut().writer();
-    nosuspend stdout.print(fmt, args) catch return;
-}
+pub const alloc = std.heap.wasm_allocator;
 
 //var sudokuGrid = [_][9]u32{
 //[_]u32{ 0, 4, 0, 0, 0, 0, 6, 1, 2 },
@@ -20,6 +15,8 @@ pub fn print(comptime fmt: []const u8, args: anytype) void {
 
 // 040000612082900704000000000070004000008500370013000000000800000005109000700040100
 
+extern fn print(d: i32) void;
+
 var sudokuGrid = [_][9]u32{
     [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -32,9 +29,18 @@ var sudokuGrid = [_][9]u32{
     [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 };
 
+export fn allocMem() *[]u8 {
+    const str_mem = alloc.alloc(u8, 81) catch unreachable;
+    return @constCast(&str_mem);
+}
+
+export fn freeMem(ptr: [*]u8) void {
+    alloc.free(ptr[0..81]);
+}
+
 // fills the sudoki grid with the string
 // expects each character to fall within [48, 57]
-pub fn buildFromStr(str: [81]u8) void {
+pub fn buildGridFromStr(str: [81]u8) void {
     var row: usize = 0;
     var column: usize = 0;
     for (str, 0..str.len) |c, i| {
@@ -48,17 +54,47 @@ pub fn buildFromStr(str: [81]u8) void {
     }
 }
 
-pub fn main() void {
+pub fn buildStrFromGrid() []u8 {
+    var gridStr: [81]u8 = undefined;
+    var index: usize = 0;
+    for (sudokuGrid) |row| {
+        for (row) |entry| {
+            gridStr[index] = @intCast(entry + 48);
+            index += 1;
+        }
+    }
+    return &gridStr;
+    // std.mem.copyBackwards(u8, str_ptr, gridStr);
+}
+
+fn out(str: []u8, str_ptr: [*]const u8) void {
+    std.mem.copyBackwards(u8, &@constCast(str_ptr[0..81]).*, str);
+}
+
+export fn main(str_ptr: [*]const u8) u32 {
     var i: usize = 0;
     var j: usize = 0;
+    // var result: []u8 = undefined;
 
-    const sampleStr = "040000612082900704000000000070004000008500370013000000000800000005109000700040100";
-    buildFromStr(@constCast(sampleStr).*);
+    const str = str_ptr[0..81];
+    // const sampleStr = "040000612082900704000000000070004000008500370013000000000800000005109000700040100";
+    // buildGridFromStr(@constCast(sampleStr).*);
+    buildGridFromStr(@constCast(str).*);
+
+    // print(@intCast(sudokuGrid[0][1]));
+    // print(@intCast(sudokuGrid[0][6]));
+    // print(@intCast(sudokuGrid[0][7]));
+    // print(@intCast(sudokuGrid[8][6]));
+    // print(@intCast(sudokuGrid[8][4]));
 
     const solved = solve(&sudokuGrid, &i, &j);
+    // print(@intCast(@intFromBool(solved)));
     if (solved) {
-        showGrid(sudokuGrid);
-    } else print("You failed 😛\n", .{});
+        const out_str = buildStrFromGrid();
+        out(@constCast(&out_str).*, str_ptr);
+    } else out(@constCast("Failed!"), str_ptr);
+
+    return @intCast(@intFromBool(solved));
 }
 
 fn step(i: *usize, j: *usize) void {
@@ -105,15 +141,6 @@ fn solve(grid: *[9][9]u32, i: *usize, j: *usize) bool {
     i.* = _i;
     j.* = _j;
     return false; // didn't solve :(
-}
-
-fn showGrid(grid: [9][9]u32) void {
-    for (grid) |row| {
-        for (row) |slot| {
-            print("{} ", .{slot});
-        }
-        print("\n", .{});
-    }
 }
 
 fn getSubGrid(array: *[9]u32, grid: [9][9]u32, i: usize, j: usize) void {
