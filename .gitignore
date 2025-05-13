@@ -2,3 +2,5 @@ main
 *.o
 *.wasm
 *.a
+web/node_modules
+web/public/sudoku.wasm
