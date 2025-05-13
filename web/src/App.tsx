@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import './App.css'
 
 function App() {
@@ -31,14 +31,14 @@ function App() {
   function instanceAndSolve() {
     WebAssembly.instantiateStreaming(fetch("sudoku.wasm"), {
       env: {
-        print: (d) => console.log("[fromWasm]", d)
+        print: (d: any) => console.log("[fromWasm]", d)
       }
     }).then(wasmModule => {
-      console.log(wasmModule.instance.exports);
-      const { allocMem, freeMem, main, memory } = wasmModule.instance.exports;
+      // console.log(wasmModule.instance.exports);
+      const { allocMem, main, memory } = wasmModule.instance.exports as any;
 
       // const sampleStr = "140000612082900704000000000070004000008500370013000000000800000005109000700040100";
-        const gridStr = gridToStr(sudokuGrid);
+        const gridStr = gridToStr();
       const encoder = new TextEncoder();
       const bytes = encoder.encode(gridStr);
 
