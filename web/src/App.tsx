@@ -18,6 +18,7 @@ function App() {
     for (let i = 0; i < strArr.length; i++) {
       const str = strArr[i];
         if ((i + 1) % 9 == 0) {
+            outGrid[row][column] = parseInt(str);
             row += 1;
             column = 0;
             continue;
