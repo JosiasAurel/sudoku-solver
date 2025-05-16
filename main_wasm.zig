@@ -29,6 +29,14 @@ var sudokuGrid = [_][9]u32{
     [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 };
 
+export fn clearGrid() void {
+    for (0..sudokuGrid.len) |row| {
+        for (0..sudokuGrid[row].len) |column| {
+            sudokuGrid[row][column] = 0;
+        }
+    }
+}
+
 export fn allocMem() *[]u8 {
     const str_mem = alloc.alloc(u8, 81) catch unreachable;
     return @constCast(&str_mem);
@@ -45,6 +53,7 @@ pub fn buildGridFromStr(str: [81]u8) void {
     var column: usize = 0;
     for (str, 0..str.len) |c, i| {
         if ((i + 1) % 9 == 0) {
+            sudokuGrid[row][column] = c - 48;
             row += 1;
             column = 0;
             continue;
