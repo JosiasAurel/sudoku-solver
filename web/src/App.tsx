@@ -1,14 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 
+type Grid = Array<Array<number>>;
 function App() {
-  const [sudokuGrid, setSudokuGrid] = useState<Array<Array<number>>>(
+  const [sudokuGrid, setSudokuGrid] = useState<Grid>(
     new Array(9).fill(0).map(() => new Array(9).fill(0))
   );
+  const [gridStr, setGridStr] = useState<string>("");
 
-  function gridToStr() {
-    return sudokuGrid.map(subgrid => subgrid.map(entry => entry.toString()).join("")).join("");
-  }
+  useEffect(() => {
+      setGridStr(
+        sudokuGrid.map(subgrid => subgrid.map(entry => entry.toString()).join("")).join("")
+      );
+  }, [sudokuGrid]);
 
   function gridFromStr(gridStr: string) {
     const strArr = gridStr.split("");
@@ -36,15 +40,17 @@ function App() {
       }
     }).then(wasmModule => {
       // console.log(wasmModule.instance.exports);
-      const { allocMem, main, memory } = wasmModule.instance.exports as any;
+      const { allocMem, main, memory, clearGrid } = wasmModule.instance.exports as any;
 
-      // const sampleStr = "140000612082900704000000000070004000008500370013000000000800000005109000700040100";
-        const gridStr = gridToStr();
+      // console.log("gridStr", gridStr);
       const encoder = new TextEncoder();
       const bytes = encoder.encode(gridStr);
 
       const ptr = allocMem();
       const wasmMem = new Uint8Array(memory.buffer, ptr, 81);
+
+      // just a precaution
+      clearGrid();
       // write the string to the wasm memory
       wasmMem.set(bytes);
 
@@ -55,22 +61,12 @@ function App() {
         const str = decoder.decode(wasmMem);
           setSudokuGrid(gridFromStr(str));
           alert("Solved!");
-        // console.log("result", str);
       } else {
         const str = decoder.decode(wasmMem.slice(0, 7));
         alert(str);
-        // console.log("result", str);
       }
     })
   }
-
-  /*
-  useEffect(() => {
-    console.log(gridToStr());
-    console.log(gridFromStr("040000612082900704000000000070004000008500370013000000000800000005109000700040100"));
-  }, [sudokuGrid]);
-
-  */
 
   return (
     <>
