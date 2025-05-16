@@ -32,6 +32,14 @@ var sudokuGrid = [_][9]u32{
     [_]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 };
 
+fn clearGrid() void {
+    for (0..sudokuGrid.len) |row| {
+        for (0..sudokuGrid[row].len) |column| {
+            sudokuGrid[row][column] = 0;
+        }
+    }
+}
+
 // fills the sudoki grid with the string
 // expects each character to fall within [48, 57]
 pub fn buildFromStr(str: [81]u8) void {
@@ -39,6 +47,7 @@ pub fn buildFromStr(str: [81]u8) void {
     var column: usize = 0;
     for (str, 0..str.len) |c, i| {
         if ((i + 1) % 9 == 0) {
+            sudokuGrid[row][column] = c - 48;
             row += 1;
             column = 0;
             continue;
@@ -52,7 +61,8 @@ pub fn main() void {
     var i: usize = 0;
     var j: usize = 0;
 
-    const sampleStr = "040000612082900704000000000070004000008500370013000000000800000005109000700040100";
+    clearGrid();
+    const sampleStr = "005003900200000000708400050001000000040009200000006300000500000600704031007020080";
     buildFromStr(@constCast(sampleStr).*);
 
     const solved = solve(&sudokuGrid, &i, &j);
